@@ -25,37 +25,101 @@ import yaml
 import zipfile
 
 # Constants used in this script
+# map KDE's translated language codes to those expected by Android
+# see https://f-droid.org/en/docs/Translation_and_Localization/
+# F-Droid is more tolerant than the Play Store here, the latter rejects anything not exactly matching its known codes
+# Android does do the expected fallbacks, so the seemingly "too specific" mappings here are still working as expected
+# see https://developer.android.com/guide/topics/resources/multilingual-support#resource-resolution-examples
 languageMap = {
     None: "en-US",
-    "ca": "ca-ES"
+    "ca-valencia": None, # not supported by Android
+    "cs": "cs-CZ",
+    "de": "de-DE",
+    "es": "es-ES",
+    "eu": "eu-ES",
+    "fi": "fi-FI",
+    "fr": "fr-FR",
+    "gl": "gl-ES",
+    "ia": None, # not supported by Android
+    "it": "it-IT",
+    "ko": "ko-KR",
+    "nl": "nl-NL",
+    "pl": "pl-PL",
+    "pt": "pt-PT",
+    "ru": "ru-RU",
+    "sr": "sr-Cyrl-RS",
+    "sr@latin": "sr-Latn-RS",
+    "sv": "sv-SE",
+    'x-test': None
 }
+
+# The subset of supported rich text tags in F-Droid and Google Play
+# - see https://f-droid.org/en/docs/All_About_Descriptions_Graphics_and_Screenshots/ for F-Droid
+# - Google Play doesn't support lists
+supportedRichTextTags = { 'b', 'u', 'i' }
+
+# List all translated languages present in an Appstream XML file
+def listAllLanguages(root, langs):
+    for elem in root:
+        lang = elem.get('{http://www.w3.org/XML/1998/namespace}lang')
+        if not lang in langs:
+            langs.add(lang)
+        listAllLanguages(elem, langs)
+
+# Apply language fallback to a map of translations
+def applyLanguageFallback(data, allLanguages):
+    for l in allLanguages:
+        if not l in data or not data[l] or len(data[l]) == 0:
+            data[l] = data[None]
 
 # Android appdata.xml textual item parser
 # This function handles reading standard text entries within an Android appdata.xml file
 # In particular, it handles splitting out the various translations, and converts some HTML to something which F-Droid can make use of
-def readText(elem, found):
+# We have to handle incomplete translations both on top-level and intermediate tags,
+# and fall back to the English default text where necessary.
+def readText(elem, found, allLanguages):
     # Determine the language this entry is in
     lang = elem.get('{http://www.w3.org/XML/1998/namespace}lang')
-    if lang == 'x-test':
-        return
 
     # Do we have any text for this language yet?
     # If not, get everything setup
-    if not lang in found:
-        found[lang] = ""
-
-    # Do we have a HTML List Item?
-    if elem.tag == 'li':
-        found[lang] += "· "
+    for l in allLanguages:
+        if not l in found:
+            found[l] = ""
 
     # If there is text available, we'll want to extract it
     # Additionally, if this element has any children, make sure we read those as well
-    # It isn't clear if it is possible for an item to not have text, but to have children which do have text
-    # The code will currently skip these if they're encountered
-    if elem.text:
+    if elem.tag in supportedRichTextTags:
+        if (elem.text and elem.text.strip()) or lang:
+            found[lang] += '<' + elem.tag + '>'
+        else:
+            for l in allLanguages:
+                found[l] += '<' + elem.tag + '>'
+    elif elem.tag == 'li':
+        found[lang] += '· '
+
+    if elem.text and elem.text.strip():
         found[lang] += elem.text
-        for child in elem:
-            readText(child, found)
+
+    subOutput = {}
+    for child in elem:
+        if not child.get('{http://www.w3.org/XML/1998/namespace}lang') and len(subOutput) > 0:
+            applyLanguageFallback(subOutput, allLanguages)
+            for l in allLanguages:
+                found[l] += subOutput[l]
+            subOutput = {}
+        readText(child, subOutput, allLanguages)
+    if len(subOutput) > 0:
+        applyLanguageFallback(subOutput, allLanguages)
+        for l in allLanguages:
+            found[l] += subOutput[l]
+
+    if elem.tag in supportedRichTextTags:
+        if (elem.text and elem.text.strip()) or lang:
+            found[lang] += '</' + elem.tag + '>'
+        else:
+            for l in allLanguages:
+                found[l] += '</' + elem.tag + '>'
 
     # Finally, if this element is a HTML Paragraph (p) or HTML List Item (li) make sure we add a new line for presentation purposes
     if elem.tag == 'li' or elem.tag == 'p':
@@ -71,6 +135,8 @@ def createFastlaneFile( applicationName, filenameToPopulate, fileContent ):
     for lang, text in fileContent.items():
         # First, do we need to amend the language id, to turn the Android language ID into something more F-Droid/Fastlane friendly?
         languageCode = languageMap.get(lang, lang)
+        if not languageCode:
+            continue
 
         # Next we need to determine the path to the directory we're going to be writing the data into
         repositoryBasePath = arguments.output
@@ -81,7 +147,7 @@ def createFastlaneFile( applicationName, filenameToPopulate, fileContent ):
 
         # Now write out file contents!
         with open(path + '/' + filenameToPopulate, 'w') as f:
-            f.write(text)
+            f.write(text.strip()) # trim whitespaces, to avoid spurious differences after a Google Play roundtrip
 
 # Create the summary appname.yml file used by F-Droid to summarise this particular entry in the repository
 # see https://f-droid.org/en/docs/Build_Metadata_Reference/
@@ -100,7 +166,7 @@ def createYml(appname, data):
     else:
         info['Categories']  = ['KDE']
 
-    # Update the general sumamry as well
+    # Update the general summary as well
     info['Summary'] = data['summary'][None]
 
     # Check to see if we have a Homepage...
@@ -117,13 +183,59 @@ def createYml(appname, data):
     if 'source-repo' in data:
         info['SourceCode'] = data['source-repo']
 
+    if 'url-donation' in data:
+        info['Donate'] = data['url-donation'][None]
+    else:
+        info['Donate'] = 'https://kde.org/community/donations/'
+
     # static data
-    info['Donate'] = 'https://kde.org/community/donations/'
     info['Translation'] = 'https://l10n.kde.org/'
 
     # Finally, with our updates completed, we can save the updated appname.yml file back to disk
     with open(path, 'w') as output:
         yaml.dump(info, output, default_flow_style=False)
+
+# Integrates locally existing image assets into the metadata
+def processLocalImages(applicationName, data):
+    if not os.path.exists(os.path.join(arguments.source, 'fastlane')):
+        return
+
+    outPath = os.path.abspath(arguments.output);
+    oldcwd = os.getcwd()
+    os.chdir(os.path.join(arguments.source, 'fastlane'))
+
+    imageFiles = glob.glob('metadata/**/*.png', recursive=True)
+    imageFiles.extend(glob.glob('metadata/**/*.jpg', recursive=True))
+    for image in imageFiles:
+        # noramlize single- vs multi-app layouts
+        imageDestName = image.replace('metadata/android', 'metadata/' + applicationName)
+
+        # copy image
+        os.makedirs(os.path.dirname(os.path.join(outPath, imageDestName)), exist_ok=True)
+        shutil.copy(image, os.path.join(outPath, imageDestName))
+
+        # if the source already contains screenshots, those override whatever we found in the appstream file
+        if 'phoneScreenshots' in image:
+            data['screenshots'] = {}
+
+    os.chdir(oldcwd)
+
+# Attempt to find the application icon if we haven't gotten that explicitly from processLocalImages
+def findIcon(applicationName, iconBaseName):
+    iconPath = os.path.join(arguments.output, 'metadata', applicationName, 'en-US', 'images', 'icon.png')
+    if os.path.exists(iconPath):
+        return
+
+    oldcwd = os.getcwd()
+    os.chdir(arguments.source)
+
+    iconFiles = glob.glob(f"**/{iconBaseName}-playstore.png", recursive=True)
+    for icon in iconFiles:
+        os.makedirs(os.path.dirname(iconPath), exist_ok=True)
+        shutil.copy(icon, iconPath)
+        break
+
+    os.chdir(oldcwd)
 
 # Download screenshots referenced in the appstream data
 # see https://f-droid.org/en/docs/All_About_Descriptions_Graphics_and_Screenshots/
@@ -131,12 +243,10 @@ def downloadScreenshots(applicationName, data):
     if not 'screenshots' in data:
         return
 
-    basePath = arguments.output
-    path = os.path.join(basePath, 'metadata',  applicationName, 'en-US', 'images', 'phoneScreenshots')
-    shutil.rmtree(path, ignore_errors=True)
+    path = os.path.join(arguments.output, 'metadata',  applicationName, 'en-US', 'images', 'phoneScreenshots')
     os.makedirs(path, exist_ok=True)
 
-    i = 0
+    i = 1 # number screenshots starting at 1 rather than 0 to match what the fastlane tool does
     for screenshot in data['screenshots']:
         fileName = str(i) + '-' + screenshot[screenshot.rindex('/') + 1:]
         r = requests.get(screenshot)
@@ -162,33 +272,20 @@ def createMetadataArchive(applicationName):
         archive.write(file, file)
     os.chdir(oldcwd)
 
-# Main function for extracting metadata from APK files
-def processApkFile(apkFilepath):
-    # First, determine the name of the application we have here
-    # This is needed in order to locate the metadata files within the APK that have the information we need
+# Generate metadata for the given appstream and desktop files
+def processAppstreamFile(appstreamFileName, desktopFileName, iconBaseName):
+    # appstreamFileName has the form <id>.appdata.xml or <id>.metainfo.xml, so we
+    # have to strip off two extensions
+    applicationName = os.path.splitext(os.path.splitext(os.path.basename(appstreamFileName))[0])[0]
 
-    # Prepare the aapt (Android SDK command) to inspect the provided APK
-    commandToRun = "aapt dump badging %s" % (apkFilepath)
-    manifest = subprocess.check_output( commandToRun, shell=True ).decode('utf-8')
-    # Search through the aapt output for the name of the application
-    result = re.search(' name=\'([^\']*)\'', manifest)
-    applicationName = result.group(1)
-
-    # Attempt to look within the APK provided for the metadata information we will need
-    with zipfile.ZipFile(apkFilepath, 'r') as contents:
-        appdataFile = contents.open("assets/share/metainfo/%s.appdata.xml" % applicationName)
-        desktopFileContent = None
-        try:
-            desktopFileContent = contents.read("assets/share/applications/%s.desktop" % applicationName)
-        except:
-            None
-        processAppstreamData(applicationName, appdataFile.read(), desktopFileContent)
-
-# Extract meta data from appstream/desktop file contents
-def processAppstreamData(applicationName, appstreamData, desktopData):
     data = {}
     # Within this file we look at every entry, and where possible try to export it's content so we can use it later
-    root = ET.fromstring(appstreamData)
+    appstreamFile = open(appstreamFileName, "rb")
+    root = ET.fromstring(appstreamFile.read())
+
+    allLanguages = set()
+    listAllLanguages(root, allLanguages)
+
     for child in root:
         # Make sure we start with a blank slate for this entry
         output = {}
@@ -223,23 +320,21 @@ def processAppstreamData(applicationName, appstreamData, desktopData):
 
         # Otherwise this is just textual information we need to extract
         else:
-            readText(child, output)
+            readText(child, output, allLanguages)
 
         # Save the information we've gathered!
         data[tag] = output
 
+    applyLanguageFallback(data['name'], allLanguages)
+    applyLanguageFallback(data['summary'], allLanguages)
+    applyLanguageFallback(data['description'], allLanguages)
+
     # Did we find any categories?
     # Sometimes we don't find any within the Fastlane information, but without categories the F-Droid store isn't of much use
     # In the event this happens, fallback to the *.desktop file for the application to see if it can provide any insight.
-    if not 'categories' in data and desktopData:
-        # The Python XDG extension/wrapper requires that it be able to read the file itself
-        # To ensure it is able to do this, we transfer the content of the file from the APK out to a temporary file to keep it happy
-        (fd, path) = tempfile.mkstemp(suffix=applicationName + ".desktop")
-        handle = open(fd, "wb")
-        handle.write(desktopData)
-        handle.close()
+    if not 'categories' in data and desktopFileName:
         # Parse the XDG format *.desktop file, and extract the categories within it
-        desktopFile = xdg.DesktopEntry.DesktopEntry(path)
+        desktopFile = xdg.DesktopEntry.DesktopEntry(desktopFileName)
         data['categories'] = { None: desktopFile.getCategories() }
 
     # Try to figure out the source repository
@@ -253,18 +348,16 @@ def processAppstreamData(applicationName, appstreamData, desktopData):
     createFastlaneFile( applicationName, "short_description.txt", data['summary'] )
     createFastlaneFile( applicationName, "full_description.txt", data['description'] )
     createYml(applicationName, data)
-    downloadScreenshots(applicationName, data)
-    createMetadataArchive(applicationName)
 
-# Generate metadata for the given appstream and desktop files
-def processAppstreamFile(appstreamFileName, desktopFileName):
-    appstreamFile = open(appstreamFileName, "rb")
-    desktopData = None
-    if desktopFileName and os.path.exists(desktopFileName):
-        desktopFile = open(desktopFileName, "rb")
-        desktopData = desktopFile.read()
-    applicationName = os.path.basename(appstreamFileName)[:-12]
-    processAppstreamData(applicationName, appstreamFile.read(), desktopData)
+    # cleanup old image files before collecting new ones
+    imagePath = os.path.join(arguments.output, 'metadata',  applicationName, 'en-US', 'images')
+    shutil.rmtree(imagePath, ignore_errors=True)
+    processLocalImages(applicationName, data)
+    downloadScreenshots(applicationName, data)
+    findIcon(applicationName, iconBaseName)
+
+    # put the result in an archive file for easier use by Jenkins
+    createMetadataArchive(applicationName)
 
 # scan source directory for manifests/metadata we can work with
 def scanSourceDir():
@@ -286,8 +379,14 @@ def scanSourceDir():
         if not appname or not is_app:
             continue
 
+        iconBaseName = None
+        for elem in root.findall('application'):
+            if prefix + 'icon' in elem.attrib:
+                iconBaseName = elem.attrib[prefix + 'icon'].split('/')[-1]
+
         # now that we have the app id, look for matching appdata/desktop files
-        appdataFiles = glob.iglob(arguments.source + "/**/" + appname + ".appdata.xml", recursive=True)
+        appdataFiles = glob.glob(arguments.source + "/**/" + appname + ".metainfo.xml", recursive=True)
+        appdataFiles.extend(glob.glob(arguments.source + "/**/" + appname + ".appdata.xml", recursive=True))
         appdataFile = None
         for f in appdataFiles:
             appdataFile = f
@@ -301,14 +400,13 @@ def scanSourceDir():
             desktopFile = f
             break
 
-        processAppstreamFile(appdataFile, desktopFile)
+        processAppstreamFile(appdataFile, desktopFile, iconBaseName)
 
 
 ### Script Commences
 
 # Parse the command line arguments we've been given
 parser = argparse.ArgumentParser(description='Generate fastlane metadata for Android apps from appstream metadata')
-parser.add_argument('--apk', type=str, required=False, help='APK file to extract metadata from')
 parser.add_argument('--appstream', type=str, required=False, help='Appstream file to extract metadata from')
 parser.add_argument('--desktop', type=str, required=False, help='Desktop file to extract additional metadata from')
 parser.add_argument('--source', type=str, required=False, help='Source directory to find metadata in')
@@ -323,12 +421,6 @@ if arguments.appstream and os.path.exists(arguments.appstream):
     processAppstreamFile(arguments.appstream, arguments.desktop)
     sys.exit(0)
 
-# else, if we have an APK, try to find the appstream file in there
-# this ensures compatibility with the old metadata generation
-if arguments.apk and os.path.exists(arguments.apk):
-    processApkFile(arguments.apk)
-    sys.exit(0)
-
 # else, look in the source dir for appstream/desktop files
 # this follows roughly what get-apk-args from binary factory does
 if arguments.source and os.path.exists(arguments.source):
@@ -336,5 +428,5 @@ if arguments.source and os.path.exists(arguments.source):
     sys.exit(0)
 
 # else: missing arguments
-print("Either one of --appstream, --apk or --source have to be provided!")
+print("Either one of --appstream or --source have to be provided!")
 sys.exit(1)

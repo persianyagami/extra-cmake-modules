@@ -1,106 +1,3 @@
-#.rst:
-# KDECMakeSettings
-# ----------------
-#
-# Changes various CMake settings to what the KDE community views as more
-# sensible defaults.
-#
-# It is recommended to include this module with the NO_POLICY_SCOPE flag,
-# otherwise you may get spurious warnings with some versions of CMake.
-#
-# It is split into three parts, which can be independently disabled if desired.
-#
-# Runtime Paths
-# ~~~~~~~~~~~~~
-#
-# The default runtime path (used on Unix systems to search for
-# dynamically-linked libraries) is set to include the location that libraries
-# will be installed to (as set in LIB_INSTALL_DIR or, if the former is not set,
-# KDE_INSTALL_LIBDIR), and also the linker search path.
-#
-# Note that ``LIB_INSTALL_DIR`` or alternatively ``KDE_INSTALL_LIBDIR`` needs
-# to be set before including this module.
-# Typically, this is done by including the :kde-module:`KDEInstallDirs` module.
-#
-# This section can be disabled by setting ``KDE_SKIP_RPATH_SETTINGS`` to TRUE
-# before including this module.
-#
-#
-# Testing
-# ~~~~~~~
-#
-# Testing is enabled by default, and an option (BUILD_TESTING) is provided for
-# users to control this. See the CTest module documentation in the CMake manual
-# for more details.
-#
-# This section can be disabled by setting ``KDE_SKIP_TEST_SETTINGS`` to TRUE
-# before including this module.
-#
-#
-# Build Settings
-# ~~~~~~~~~~~~~~
-#
-# Various CMake build defaults are altered, such as searching source and build
-# directories for includes first, enabling automoc by default.
-#
-# When find_package(ECM 5.38) or higher is called, this also selects
-# a layout for the build dir that helps running executables without installing:
-# all executables are built into a toplevel "bin" dir, making it possible to find
-# helper binaries, and to find uninstalled plugins (provided that you use
-# kcoreaddons_add_plugin or set LIBRARY_OUTPUT_DIRECTORY as documented on
-# https://community.kde.org/Guidelines_and_HOWTOs/Making_apps_run_uninstalled).
-#
-# This section can be disabled by setting ``KDE_SKIP_BUILD_SETTINGS`` to TRUE
-# before including this module.
-#
-# This section also provides an "uninstall" target that can be individually
-# disabled by setting ``KDE_SKIP_UNINSTALL_TARGET`` to TRUE before including
-# this module.
-#
-# By default on OS X, X11 and XCB related detections are disabled. However if
-# the need would arise to use these technologies, the detection can be enabled
-# by setting ``APPLE_FORCE_X11`` to ``ON``.
-#
-# A warning is printed for the developer to know that the detection is disabled on OS X.
-# This message can be turned off by setting ``APPLE_SUPPRESS_X11_WARNING`` to ``ON``.
-#
-# Since pre-1.0.0.
-#
-# ``ENABLE_CLAZY`` option is added (OFF by default) when clang is being used.
-# Turning this option on will force clang to load the clazy plugins for richer
-# warnings on Qt-related code.
-#
-# If clang is not being used, this won't have an effect.
-# See https://commits.kde.org/clazy?path=README.md
-#
-# Since 5.17.0
-#
-# - Uninstall target functionality since 1.7.0.
-# - ``APPLE_FORCE_X11`` option since 5.14.0 (detecting X11 was previously the default behavior)
-# - ``APPLE_SUPPRESS_X11_WARNING`` option since 5.14.0
-# - CMAKE_AUTORCC enabled by default when supported by cmake (>= 3.0) since 5.62.0
-#
-# Translations
-# ~~~~~~~~~~~~
-# A fetch-translations target will be set up that will download translations
-# for projects using l10n.kde.org.
-#
-# ``KDE_L10N_BRANCH`` will be responsible for choosing which l10n branch to use
-# for the translations.
-#
-# ``KDE_L10N_AUTO_TRANSLATIONS`` (OFF by default) will indicate whether translations
-# should be downloaded when building the project.
-#
-# Since 5.34.0
-#
-# ``KDE_L10N_SYNC_TRANSLATIONS`` (OFF by default) will download the translations at configuration
-# time instead of build time.
-#
-# Since 5.50.0
-#
-#
-
-#=============================================================================
 # SPDX-FileCopyrightText: 2014 Alex Merry <alex.merry@kde.org>
 # SPDX-FileCopyrightText: 2013 Aleix Pol <aleixpol@kde.org>
 # SPDX-FileCopyrightText: 2012-2013 Stephen Kelly <steveire@gmail.com>
@@ -109,6 +6,107 @@
 # SPDX-FileCopyrightText: 2006-2013 Alex Neundorf <neundorf@kde.org>
 #
 # SPDX-License-Identifier: BSD-3-Clause
+
+#[=======================================================================[.rst:
+KDECMakeSettings
+----------------
+
+Changes various CMake settings to what the KDE community views as more
+sensible defaults.
+
+It is recommended to include this module with the NO_POLICY_SCOPE flag,
+otherwise you may get spurious warnings with some versions of CMake.
+
+It is split into three parts, which can be independently disabled if desired.
+
+Runtime Paths
+~~~~~~~~~~~~~
+
+The default runtime path (used on Unix systems to search for
+dynamically-linked libraries) is set to include the location that libraries
+will be installed to (as set in LIB_INSTALL_DIR or, if the former is not set,
+KDE_INSTALL_LIBDIR), and also the linker search path.
+
+Note that ``LIB_INSTALL_DIR`` or alternatively ``KDE_INSTALL_LIBDIR`` needs
+to be set before including this module.
+Typically, this is done by including the :kde-module:`KDEInstallDirs` module.
+
+This section can be disabled by setting ``KDE_SKIP_RPATH_SETTINGS`` to TRUE
+before including this module.
+
+
+Testing
+~~~~~~~
+
+Testing is enabled by default, and an option (BUILD_TESTING) is provided for
+users to control this. See the CTest module documentation in the CMake manual
+for more details.
+
+This section can be disabled by setting ``KDE_SKIP_TEST_SETTINGS`` to TRUE
+before including this module.
+
+
+Build Settings
+~~~~~~~~~~~~~~
+
+Various CMake build defaults are altered, such as searching source and build
+directories for includes first, enabling automoc by default.
+
+When find_package(ECM 5.38) or higher is called, this also selects
+a layout for the build dir that helps running executables without installing:
+all executables are built into a toplevel "bin" dir, making it possible to find
+helper binaries, and to find uninstalled plugins (provided that you use
+kcoreaddons_add_plugin or set LIBRARY_OUTPUT_DIRECTORY as documented on
+https://community.kde.org/Guidelines_and_HOWTOs/Making_apps_run_uninstalled).
+
+This section can be disabled by setting ``KDE_SKIP_BUILD_SETTINGS`` to TRUE
+before including this module.
+
+This section also provides an "uninstall" target that can be individually
+disabled by setting ``KDE_SKIP_UNINSTALL_TARGET`` to TRUE before including
+this module.
+
+By default on OS X, X11 and XCB related detections are disabled. However if
+the need would arise to use these technologies, the detection can be enabled
+by setting ``APPLE_FORCE_X11`` to ``ON``.
+
+A warning is printed for the developer to know that the detection is disabled on OS X.
+This message can be turned off by setting ``APPLE_SUPPRESS_X11_WARNING`` to ``ON``.
+
+Since pre-1.0.0.
+
+``ENABLE_CLAZY`` option is added (OFF by default) when clang is being used.
+Turning this option on will force clang to load the clazy plugins for richer
+warnings on Qt-related code.
+
+If clang is not being used, this won't have an effect.
+See https://commits.kde.org/clazy?path=README.md
+
+Since 5.17.0
+
+- Uninstall target functionality since 1.7.0.
+- ``APPLE_FORCE_X11`` option since 5.14.0 (detecting X11 was previously the default behavior)
+- ``APPLE_SUPPRESS_X11_WARNING`` option since 5.14.0
+- CMAKE_AUTORCC enabled by default when supported by cmake (>= 3.0) since 5.62.0
+
+Translations
+~~~~~~~~~~~~
+A fetch-translations target will be set up that will download translations
+for projects using l10n.kde.org.
+
+``KDE_L10N_BRANCH`` will be responsible for choosing which l10n branch to use
+for the translations.
+
+``KDE_L10N_AUTO_TRANSLATIONS`` (OFF by default) will indicate whether translations
+should be downloaded when building the project.
+
+Since 5.34.0
+
+``KDE_L10N_SYNC_TRANSLATIONS`` (OFF by default) will download the translations at configuration
+time instead of build time.
+
+Since 5.50.0
+#]=======================================================================]
 
 ################# RPATH handling ##################################
 
@@ -222,9 +220,7 @@ if(NOT KDE_SKIP_BUILD_SETTINGS)
    # Since CMake 3.0
    # TODO KF6: discuss enabling AUTOUIC and note porting requirements. autouic
    #   acts on all #include "ui_*.h" assuming *.ui exists
-   if(NOT CMAKE_VERSION VERSION_LESS 3.0)
-      set(CMAKE_AUTORCC ON)
-   endif()
+   set(CMAKE_AUTORCC ON)
 
    # By default, create 'GUI' executables. This can be reverted on a per-target basis
    # using ECMMarkNonGuiExecutable
@@ -248,7 +244,7 @@ if(NOT KDE_SKIP_BUILD_SETTINGS)
    # even without installation.
 
    # We do the same under Unix to make it possible to run tests and apps without installing
-   if (WIN32 OR NOT ("${ECM_GLOBAL_FIND_VERSION}" VERSION_LESS "5.38.0"))
+   if (WIN32 OR ECM_GLOBAL_FIND_VERSION VERSION_GREATER_EQUAL 5.38.0)
        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -301,7 +297,7 @@ endif()
 # Download translations
 
 function(_repository_name reponame dir)
-    execute_process(COMMAND git config --get remote.origin.url
+    execute_process(COMMAND git remote get-url --all origin
         OUTPUT_VARIABLE giturl
         RESULT_VARIABLE exitCode
         WORKING_DIRECTORY "${dir}")
@@ -344,9 +340,7 @@ if(NOT EXISTS ${CMAKE_SOURCE_DIR}/po AND NOT TARGET fetch-translations)
     set(_l10n_po_dir "${CMAKE_BINARY_DIR}/po")
     set(_l10n_poqm_dir "${CMAKE_BINARY_DIR}/poqm")
 
-    if(CMAKE_VERSION VERSION_GREATER 3.2)
-        set(extra BYPRODUCTS ${_l10n_po_dir} ${_l10n_poqm_dir})
-    endif()
+    set(extra BYPRODUCTS ${_l10n_po_dir} ${_l10n_poqm_dir})
 
     set(fetch_commands
         COMMAND ruby "${CMAKE_BINARY_DIR}/releaseme/fetchpo.rb"

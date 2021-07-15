@@ -26,7 +26,7 @@ FULL_PATH_NAMES        = NO
 STRIP_FROM_PATH        = 
 STRIP_FROM_INC_PATH    = 
 SHORT_NAMES            = NO
-# Do not require explicity @brief command for brief description
+# Do not require explicitly @brief command for brief description
 JAVADOC_AUTOBRIEF      = YES
 MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
@@ -116,8 +116,6 @@ USE_MDFILE_AS_MAINPAGE = @ECM_QCH_DOXYGEN_MAINPAGE_MDFILE@
 # configuration options related to the alphabetical class index
 #---------------------------------------------------------------------------
 ALPHABETICAL_INDEX     = NO
-COLS_IN_ALPHA_INDEX    = 5
-IGNORE_PREFIX          = 
 #---------------------------------------------------------------------------
 # do NOT generate any formats other than qhp
 #---------------------------------------------------------------------------

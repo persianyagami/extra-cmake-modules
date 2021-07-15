@@ -1,41 +1,40 @@
-#.rst:
-# FindPulseAudio
-# --------------
-#
-# Try to locate the PulseAudio library.
-# If found, this will define the following variables:
-#
-# ``PulseAudio_FOUND``
-#      True if the system has the PulseAudio library of at least
-#      the minimum version specified by either the version parameter
-#      to find_package() or the variable PulseAudio_MINIMUM_VERSION
-# ``PulseAudio_INCLUDE_DIRS``
-#      The PulseAudio include directory
-# ``PulseAudio_LIBRARIES``
-#      The PulseAudio libraries for linking
-# ``PulseAudio_MAINLOOP_LIBRARY``
-#      The libraries needed to use PulseAudio Mainloop
-# ``PulseAudio_VERSION``
-#      The version of PulseAudio that was found
-# ``PulseAudio_INCLUDE_DIR``
-#     Deprecated, use ``PulseAudio_INCLUDE_DIRS``
-# ``PulseAudio_LIBRARY``
-#     Deprecated, use ``PulseAudio_LIBRARIES``
-#
-# If ``PulseAudio_FOUND`` is TRUE, it will also define the following
-# imported target:
-#
-# ``PulseAudio::PulseAudio``
-#     The PulseAudio library
-#
-# Since 5.41.0.
-
-#=============================================================================
 # SPDX-FileCopyrightText: 2008 Matthias Kretz <kretz@kde.org>
 # SPDX-FileCopyrightText: 2009 Marcus Hufgard <Marcus.Hufgard@hufgard.de>
 #
 # SPDX-License-Identifier: BSD-3-Clause
-#=============================================================================
+
+#[=======================================================================[.rst:
+FindPulseAudio
+--------------
+
+Try to locate the PulseAudio library.
+If found, this will define the following variables:
+
+``PulseAudio_FOUND``
+     True if the system has the PulseAudio library of at least
+     the minimum version specified by either the version parameter
+     to find_package() or the variable PulseAudio_MINIMUM_VERSION
+``PulseAudio_INCLUDE_DIRS``
+     The PulseAudio include directory
+``PulseAudio_LIBRARIES``
+     The PulseAudio libraries for linking
+``PulseAudio_MAINLOOP_LIBRARY``
+     The libraries needed to use PulseAudio Mainloop
+``PulseAudio_VERSION``
+     The version of PulseAudio that was found
+``PulseAudio_INCLUDE_DIR``
+    Deprecated, use ``PulseAudio_INCLUDE_DIRS``
+``PulseAudio_LIBRARY``
+    Deprecated, use ``PulseAudio_LIBRARIES``
+
+If ``PulseAudio_FOUND`` is TRUE, it will also define the following
+imported target:
+
+``PulseAudio::PulseAudio``
+    The PulseAudio library
+
+Since 5.41.0.
+#]=======================================================================]
 
 # Support PulseAudio_MINIMUM_VERSION for compatibility:
 if(NOT PulseAudio_FIND_VERSION)
@@ -47,7 +46,7 @@ if(NOT PulseAudio_FIND_VERSION)
   set(PulseAudio_FIND_VERSION "0.9.9")
 endif()
 
-find_package(PkgConfig)
+find_package(PkgConfig QUIET)
 pkg_check_modules(PC_PulseAudio QUIET libpulse>=${PulseAudio_FIND_VERSION})
 pkg_check_modules(PC_PulseAudio_MAINLOOP QUIET libpulse-mainloop-glib)
 

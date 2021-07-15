@@ -5,13 +5,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #=============================================================================
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 #
 # Preliminary setup
 #
 
-set(VERSION "5.78.0") # handled by release scripts
+set(VERSION "5.85.0") # handled by release scripts
 
 if (POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
@@ -96,8 +96,11 @@ install(FILES ${installModuleFiles} DESTINATION ${MODULES_INSTALL_DIR})
 file(GLOB installTestModuleFiles ${CMAKE_SOURCE_DIR}/test-modules/*[^~])
 install(FILES ${installTestModuleFiles} DESTINATION ${SHARE_INSTALL_DIR}/ECM/test-modules)
 
-file(GLOB installKdeModuleFiles ${CMAKE_SOURCE_DIR}/kde-modules/*[^~])
+file(GLOB installKdeModuleFiles LIST_DIRECTORIES FALSE ${CMAKE_SOURCE_DIR}/kde-modules/*[^~])
 install(FILES ${installKdeModuleFiles} DESTINATION ${KDE_MODULES_INSTALL_DIR})
+# The scripts need to be executable
+file(GLOB installKDECommitHooks ${CMAKE_SOURCE_DIR}/kde-modules/kde-git-commit-hooks/*[^~])
+install(PROGRAMS ${installKDECommitHooks} DESTINATION ${KDE_MODULES_INSTALL_DIR}/kde-git-commit-hooks)
 
 file(GLOB installFindModuleFiles ${CMAKE_SOURCE_DIR}/find-modules/*.cmake ${CMAKE_SOURCE_DIR}/find-modules/*.py)
 install(FILES ${installFindModuleFiles} DESTINATION ${FIND_MODULES_INSTALL_DIR})

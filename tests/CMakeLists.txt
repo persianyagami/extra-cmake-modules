@@ -60,9 +60,6 @@ endmacro()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/find-modules)
 
-# enforce finding of ReuseTool in parent scope of module, beause
-# only here the module path can point into the source directory
-find_package(ReuseTool)
 add_subdirectory(ECMCheckOutboundLicenseTest)
 
 # Skip if PyQt not available
@@ -150,7 +147,14 @@ if (TARGET Qt5::qmake)
                      KDEInstallDirsTest.relative_or_absolute dummy)
 endif ()
 if (Qt5Core_FOUND)
-    add_test_macro(ECMQtDeclareLoggingCategoryTest testmain)
+    set(ECMQtDeclareLoggingCategoryTest_EXTRA_OPTIONS
+        --build-target all
+        --build-options
+            "-DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/ECMQtDeclareLoggingCategoryTest/InstallDirectory"
+    )
+    add_test_macro(ECMQtDeclareLoggingCategoryTest
+        ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_BINARY_DIR}/ECMQtDeclareLoggingCategoryTest/check.cmake"
+    )
 endif()
 
 add_test_macro(FindModules dummy)

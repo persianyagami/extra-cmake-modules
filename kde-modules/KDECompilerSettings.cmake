@@ -1,49 +1,220 @@
-#.rst:
-# KDECompilerSettings
-# -------------------
-#
-# Set useful compile and link flags for C++ (and C) code.
-#
-# Enables many more warnings than the default, and sets stricter modes
-# for some compiler features.  By default, exceptions are disabled;
-# kde_target_enable_exceptions() can be used to re-enable them for a
-# specific target.
-#
-# NB: it is recommended to include this module with the NO_POLICY_SCOPE
-# flag, otherwise you may get spurious warnings with some versions of CMake.
-#
-# This module provides the following functions::
-#
-#   kde_source_files_enable_exceptions([file1 [file2 [...]]])
-#
-# Enables exceptions for specific source files.  This should not be
-# used on source files in a language other than C++.
-#
-# ::
-#
-#   kde_target_enable_exceptions(target <INTERFACE|PUBLIC|PRIVATE>)
-#
-# Enables exceptions for a specific target.  This should not be used
-# on a target that has source files in a language other than C++.
-#
-# ::
-#
-#   kde_enable_exceptions()
-#
-# Enables exceptions for C++ source files compiled for the
-# CMakeLists.txt file in the current directory and all subdirectories.
-#
-# Since pre-1.0.0.
-
-#=============================================================================
 # SPDX-FileCopyrightText: 2014 Alex Merry <alex.merry@kde.org>
 # SPDX-FileCopyrightText: 2013 Stephen Kelly <steveire@gmail.com>
 # SPDX-FileCopyrightText: 2012-2013 Raphael Kubo da Costa <rakuco@FreeBSD.org>
 # SPDX-FileCopyrightText: 2007 Matthias Kretz <kretz@kde.org>
 # SPDX-FileCopyrightText: 2006-2007 Laurent Montel <montel@kde.org>
 # SPDX-FileCopyrightText: 2006-2013 Alex Neundorf <neundorf@kde.org>
+# SPDX-FileCopyrightText: 2021 Friedrich W. H. Kossebau <kossebau@kde.org>
 #
 # SPDX-License-Identifier: BSD-3-Clause
+
+#[=======================================================================[.rst:
+KDECompilerSettings
+-------------------
+
+Set useful compile and link flags for C++ (and C) code.
+
+Enables many more warnings than the default, and sets stricter modes
+for some compiler features.  By default, exceptions are disabled;
+kde_target_enable_exceptions() can be used to re-enable them for a
+specific target.
+
+NB: it is recommended to include this module with the NO_POLICY_SCOPE
+flag, otherwise you may get spurious warnings with some versions of CMake.
+
+Since 5.85 newer settings are controlled by a variable
+``KDE_COMPILERSETTINGS_LEVEL``, taking an ECM version as value. That
+version can not be greater than the minimum required ECM version.
+The settings which are default at that version will then be used,
+but can be overridden by more fine-grained controls (see respective settings).
+This variable needs to be set before including this module, otherwise
+defaults to the minimum required ECM version.
+
+Modern code
+~~~~~~~~~~~
+
+The following CMake C standard default variables are set:
+
+For ``KDE_COMPILERSETTINGS_LEVEL`` >= 5.85:
+
+- ``CMAKE_C_STANDARD``: ``99``
+- ``CMAKE_C_STANDARD_REQUIRED``: ``TRUE``
+- ``CMAKE_C_EXTENSIONS``: ``OFF``
+
+Otherwise:
+
+- ``CMAKE_C_STANDARD``: ``90``
+- ``CMAKE_C_STANDARD_REQUIRED``: not modified
+- ``CMAKE_C_EXTENSIONS``: not modified
+
+If the variable ``CMAKE_C_STANDARD`` is already set when including this module,
+none of the above variables will be modified.
+
+The following CMake C++ standard default variables are set:
+
+For ``KDE_COMPILERSETTINGS_LEVEL`` >= 5.85:
+
+- ``CMAKE_CXX_STANDARD``: ``17``
+- ``CMAKE_CXX_STANDARD_REQUIRED``: ``TRUE``
+- ``CMAKE_CXX_EXTENSIONS``: ``OFF``
+
+Otherwise:
+
+- ``CMAKE_CXX_STANDARD``: ``11``
+- ``CMAKE_CXX_STANDARD_REQUIRED``: ``TRUE``
+- ``CMAKE_CXX_EXTENSIONS``: not modified.
+
+If the variable ``CMAKE_CXX_STANDARD`` is already set when including this module,
+none of the above variables will be modified.
+
+
+The following C++ compiler flags are set:
+
+- ``-pedantic`` (GNU and Clang compilers, since 5.85)
+
+  Can be disabled by setting ``KDE_SKIP_PEDANTIC_WARNINGS_SETTINGS`` to ``TRUE``
+  before including this module (default is ``FALSE`` for
+  ``KDE_COMPILERSETTINGS_LEVEL`` >= 5.85, ``TRUE`` otherwise).
+
+- ``-Wmissing-include-dirs`` (GNU compilers, since 5.85)
+
+  Can be disabled by setting ``KDE_SKIP_MISSING_INCLUDE_DIRS_WARNINGS_SETTINGS`` to ``TRUE``
+  before including this module (default is ``FALSE`` for
+  ``KDE_COMPILERSETTINGS_LEVEL`` >= 5.85, ``TRUE`` otherwise).
+
+- ``-Wzero-as-null-pointer-constant`` (GNU and Clang compilers, since 5.85)
+
+  Can be disabled by setting ``KDE_SKIP_NULLPTR_WARNINGS_SETTINGS`` to ``TRUE``
+  before including this module (default is ``FALSE`` for
+  ``KDE_COMPILERSETTINGS_LEVEL`` >= 5.85, ``TRUE`` otherwise).
+
+- Qt related preprocessor definitions (since 5.85.0):
+
+  - ``-DQT_NO_CAST_TO_ASCII``
+  - ``-DQT_NO_CAST_FROM_ASCII``
+  - ``-DQT_NO_URL_CAST_FROM_STRING``
+  - ``-DQT_NO_CAST_FROM_BYTEARRAY``
+  - ``-DQT_USE_QSTRINGBUILDER``
+  - ``-DQT_NO_NARROWING_CONVERSIONS_IN_CONNECT``
+  - ``-DQT_NO_KEYWORDS``
+  - ``-DQT_NO_FOREACH``
+  - ``-DQT_STRICT_ITERATORS``
+
+    Strict iterators are not enabled on Windows, because they lead
+    to a link error when application code iterates over a QVector<QPoint> for
+    instance, unless Qt itself was also built with strict iterators.
+    See example at https://bugreports.qt.io/browse/AUTOSUITE-946
+
+  Can be controlled by setting ``KDE_QT_MODERNCODE_DEFINITIONS_LEVEL`` to the
+  version of ECM where the wanted set of definitions has been added
+  before including this module (default is ``KDE_COMPILERSETTINGS_LEVEL``).
+  To disable individual definitions instead use ``remove_definitions()`` directly
+  after including this module.
+
+Functions
+~~~~~~~~~
+
+This module provides the following functions::
+
+  kde_source_files_enable_exceptions([file1 [file2 [...]]])
+
+Enables exceptions for specific source files.  This should not be
+used on source files in a language other than C++.
+
+::
+
+  kde_target_enable_exceptions(target <INTERFACE|PUBLIC|PRIVATE>)
+
+Enables exceptions for a specific target.  This should not be used
+on a target that has source files in a language other than C++.
+
+::
+
+  kde_enable_exceptions()
+
+Enables exceptions for C++ source files compiled for the
+CMakeLists.txt file in the current directory and all subdirectories.
+
+Example usages:
+
+.. code-block:: cmake
+
+  # needing some macro/feature only available with ECM 5.80.0
+  find_package(ECM 5.80.0 NO_MODULE)
+
+  # requiring ECM 5.80.0 above will default KDE_COMPILERSETTINGS_LEVEL also to 5.80.0,
+  # thus not activate any newer settings
+  include(KDECompilerSettings NO_POLICY_SCOPE)
+
+.. code-block:: cmake
+
+  # needing some macro/feature only available with ECM 5.87.0
+  find_package(ECM 5.87.0 NO_MODULE)
+
+  # project uses settings default as of KDECompilerSettings in ECM 5.85.0
+  set(KDE_COMPILERSETTINGS_LEVEL 5.85.0)
+  include(KDECompilerSettings NO_POLICY_SCOPE)
+
+.. code-block:: cmake
+
+  # needing some macro/feature only available with ECM 5.87.0
+  find_package(ECM 5.87.0 NO_MODULE)
+
+  # project mainly uses settings default as of KDECompilerSettings in ECM 5.85.0
+  # with some small twisting
+  set(KDE_COMPILERSETTINGS_LEVEL 5.85.0)
+  # not ready yet for pedantic compilers
+  set(KDE_SKIP_PEDANTIC_WARNINGS_SETTINGS TRUE)
+  # avoid any Qt definitions
+  set(KDE_QT_MODERNCODE_DEFINITIONS_LEVEL 5.84.0)
+  include(KDECompilerSettings NO_POLICY_SCOPE)
+
+.. code-block:: cmake
+
+  # needing some macro/feature only available with ECM 5.85.0
+  find_package(ECM 5.85.0 NO_MODULE)
+
+  # requiring ECM 5.85.0 above will default KDE_COMPILERSETTINGS_LEVEL also to 5.85.0,
+  # which again defaults KDE_QT_MODERNCODE_DEFINITIONS_LEVEL also to 5.85.0
+  include(KDECompilerSettings NO_POLICY_SCOPE)
+  # project is fine with almost all added Qt definitions as of 5.85.0, but not these ones:
+  remove_definitions(
+      -DQT_NO_KEYWORDS
+      -DQT_NO_FOREACH
+  )
+
+Inclusion of this module defines the following variables:
+
+``ENABLE_BSYMBOLICFUNCTIONS``
+    indicates whether we make use of -Bsymbolic-functions for linking.
+    It ensures libraries bind global function references locally rather than
+    at runtime.
+    This option only has an effect on ELF-based systems.
+
+    The option is disabled by default except when using
+    KDEFrameworkCompilerSettings.cmake where it's enabled. Projects can enable
+    it by calling set(ENABLE_BSYMBOLICFUNCTIONS ON) or passing -DENABLE
+    BSYMBOLICFUNCTIONS=ON when configuring the build directory.
+
+Since pre-1.0.0.
+#]=======================================================================]
+
+############################################################
+# Select and check KDE_COMPILERSETTINGS_LEVEL
+# For a specified version of KDE_COMPILERSETTINGS_LEVEL always the same set
+# of settings needs to be used, to give that version a meaning, even more as
+# the settings are usually more strict and can break builds which build fine
+# without the setting.
+# As at the time of version x it is usually unknown what future versions x+y
+# will offer as settings, the minimum required version of ECM sets the upper
+# limit then for the level version.
+if(NOT DEFINED KDE_COMPILERSETTINGS_LEVEL)
+    set(KDE_COMPILERSETTINGS_LEVEL "${ECM_GLOBAL_FIND_VERSION}")
+else()
+    if(KDE_COMPILERSETTINGS_LEVEL VERSION_GREATER "${ECM_GLOBAL_FIND_VERSION}")
+        message(FATAL_ERROR "KDE_COMPILERSETTINGS_LEVEL (${KDE_COMPILERSETTINGS_LEVEL}) cannot be newer than the min. required ECM version (${ECM_GLOBAL_FIND_VERSION}).")
+    endif()
+endif()
 
 include("${ECM_MODULE_DIR}/ECMSourceVersionControl.cmake")
 
@@ -75,7 +246,7 @@ endif()
 ############################################################
 
 macro(_kde_compiler_min_version min_version)
-    if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "${min_version}")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${min_version})
         message(WARNING "Version ${CMAKE_CXX_COMPILER_VERSION} of the ${CMAKE_CXX_COMPILER_ID} C++ compiler is not supported. Please use version ${min_version} or later.")
     endif()
 endmacro()
@@ -184,11 +355,22 @@ endif()
 
 # Pick sensible versions of the C and C++ standards.
 if (NOT CMAKE_C_STANDARD)
-    set(CMAKE_C_STANDARD 90)
+    if (KDE_COMPILERSETTINGS_LEVEL VERSION_GREATER_EQUAL 5.85.0)
+        set(CMAKE_C_STANDARD 99)
+        set(CMAKE_C_STANDARD_REQUIRED TRUE)
+        set(CMAKE_C_EXTENSIONS OFF)
+    else()
+        set(CMAKE_C_STANDARD 90)
+    endif()
 endif()
 if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED True)
+    if (KDE_COMPILERSETTINGS_LEVEL VERSION_GREATER_EQUAL 5.85.0)
+        set(CMAKE_CXX_STANDARD 17)
+        set(CMAKE_CXX_EXTENSIONS OFF)
+    else()
+        set(CMAKE_CXX_STANDARD 11)
+    endif()
+    set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 endif()
 
 # Do not merge uninitialized global variables.
@@ -237,6 +419,13 @@ if (CMAKE_SYSTEM_NAME STREQUAL GNU)
     set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -pthread")
 endif()
 
+if (MSVC)
+    # Our source files are UTF-8 encoded, and assuming that is also the
+    # default behavior of GCC/Clang. Not so for MSVC though, so force
+    # that to UTF-8 explicitly, as that will otherwise cause compile-time
+    # and runtime issues when dealing with string literals outside of 7-bit ASCII.
+    add_compile_options(/utf-8)
+endif()
 
 
 ############################################################
@@ -361,12 +550,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type")
 endif()
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5))
+    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 3.5))
     # -Wvla: use of variable-length arrays (an extension to C++)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wvla")
 endif()
-if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0) OR
-    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5))
+if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 5.0) OR
+    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 3.5))
     include(CheckCXXCompilerFlag)
     check_cxx_compiler_flag(-Wdate-time HAVE_DATE_TIME)
     if (HAVE_DATE_TIME)
@@ -376,7 +565,7 @@ if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VER
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-   if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0.0")
+   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 5.0.0)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsuggest-override -Wlogical-op" )
    endif()
 endif()
@@ -407,6 +596,21 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4661")
 endif()
 
+option(ENABLE_BSYMBOLICFUNCTIONS "Make use of -Bsymbolic-functions" OFF)
+if (ENABLE_BSYMBOLICFUNCTIONS)
+    set(_SYMBOLIC_FUNCTIONS_COMPILER_OPTION "-Wl,-Bsymbolic-functions")
+    list(APPEND CMAKE_REQUIRED_LIBRARIES "${_SYMBOLIC_FUNCTIONS_COMPILER_OPTION}")
+
+    include(CheckCXXSourceCompiles)
+
+    check_cxx_source_compiles( "int main () { return 0; }" BSYMBOLICFUNCTIONS_AVAILABLE )
+    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "${_SYMBOLIC_FUNCTIONS_COMPILER_OPTION}")
+    if (BSYMBOLICFUNCTIONS_AVAILABLE)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_SYMBOLIC_FUNCTIONS_COMPILER_OPTION}")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${_SYMBOLIC_FUNCTIONS_COMPILER_OPTION}")
+    endif()
+endif()
+
 if (WIN32)
     # Disable deprecation warnings for some API
     # FIXME: do we really want this?
@@ -424,6 +628,75 @@ if (APPLE)
     _kde_add_platform_definitions(-DQT_MAC_USE_COCOA)
 endif()
 
+############################################################
+# Modern code
+############################################################
+
+function(_kde_set_default_skip_variable_by_min_ecm _var_name _ecm_version)
+    if(NOT DEFINED ${_var_name})
+        if (KDE_COMPILERSETTINGS_LEVEL VERSION_LESS ${_ecm_version})
+            set(${_var_name} TRUE PARENT_SCOPE)
+        else()
+            set(${_var_name} FALSE PARENT_SCOPE)
+        endif()
+    endif()
+endfunction()
+
+if(NOT DEFINED KDE_QT_MODERNCODE_DEFINITIONS_LEVEL)
+    set(KDE_QT_MODERNCODE_DEFINITIONS_LEVEL ${KDE_COMPILERSETTINGS_LEVEL})
+endif()
+
+if (KDE_QT_MODERNCODE_DEFINITIONS_LEVEL VERSION_GREATER_EQUAL "5.85.0")
+    add_definitions(
+        -DQT_NO_CAST_TO_ASCII
+        -DQT_NO_CAST_FROM_ASCII
+        -DQT_NO_URL_CAST_FROM_STRING
+        -DQT_NO_CAST_FROM_BYTEARRAY
+        -DQT_USE_QSTRINGBUILDER
+        -DQT_NO_NARROWING_CONVERSIONS_IN_CONNECT
+        -DQT_NO_KEYWORDS
+        -DQT_NO_FOREACH
+    )
+    if (NOT WIN32)
+        # Strict iterators can't be used on Windows, they lead to a link error
+        # when application code iterates over a QVector<QPoint> for instance, unless
+        # Qt itself was also built with strict iterators.
+        # See example at https://bugreports.qt.io/browse/AUTOSUITE-946
+        add_definitions(-DQT_STRICT_ITERATORS)
+    endif()
+endif()
+
+_kde_set_default_skip_variable_by_min_ecm(KDE_SKIP_PEDANTIC_WARNINGS_SETTINGS "5.85.0")
+
+if (NOT KDE_SKIP_PEDANTIC_WARNINGS_SETTINGS)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
+    endif()
+endif()
+
+_kde_set_default_skip_variable_by_min_ecm(KDE_SKIP_NULLPTR_WARNINGS_SETTINGS "5.85.0")
+
+if (NOT KDE_SKIP_NULLPTR_WARNINGS_SETTINGS)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0.0")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wzero-as-null-pointer-constant" )
+        endif()
+    endif()
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0.0")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wzero-as-null-pointer-constant" )
+        endif()
+    endif()
+endif()
+
+_kde_set_default_skip_variable_by_min_ecm(KDE_SKIP_MISSING_INCLUDE_DIRS_WARNINGS_SETTINGS "5.85.0")
+
+if (NOT KDE_SKIP_MISSING_INCLUDE_DIRS_WARNINGS_SETTINGS)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wmissing-include-dirs")
+    endif()
+endif()
 
 ############################################################
 # Hacks
@@ -443,36 +716,6 @@ if (APPLE)
     set (CMAKE_MODULE_LINKER_FLAGS "-multiply_defined suppress ${CMAKE_MODULE_LINKER_FLAGS}")
 endif()
 
-if (WIN32)
-    if (MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-        # MSVC has four incompatible C runtime libraries: static (libcmt),
-        # static debug (libcmtd), shared (msvcrt) and shared debug (msvcrtd):
-        # see http://support.microsoft.com/kb/154753
-        #
-        # By default, when you create static libraries, they are automatically
-        # linked against either libcmt or libcmtd, and when you create shared
-        # libraries, they are automatically linked against either msvcrt or
-        # msvcrtd. Trying to link to both a library that links to libcmt and
-        # library that links to mscvrt, for example, will produce a warning as
-        # described at
-        # http://msdn.microsoft.com/en-us/library/aa267384%28VS.60%29.aspx
-        # and can produce link errors like
-        #    "__thiscall type_info::type_info(class type_info const &)"
-        #    (??0type_info@@AAE@ABV0@@Z) already defined in LIBCMT.lib(typinfo.obj)
-        #
-        # It is actually the options passed to the compiler, rather than the
-        # linker, which control what will be linked (/MT, /MTd, /MD or /MDd),
-        # but we can override this by telling the linker to ignore any "libcmt"
-        # or "libcmtd" link suggestion embedded in the object files, and instead
-        # link against the shared versions. That way, everything will link
-        # against the same runtime library.
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-        set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt ${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
-        set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt ${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL}")
-        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/NODEFAULTLIB:libcmtd /DEFAULTLIB:msvcrtd ${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-    endif()
-endif()
-
 if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # This was copied from the Phonon build settings, where it had the comment
     # "otherwise undefined symbol in phononcore.dll errors occurs", with the commit
@@ -484,8 +727,8 @@ if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 if (CMAKE_GENERATOR STREQUAL "Ninja" AND
-    ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9) OR
-     (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5)))
+    ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 4.9) OR
+     (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 3.5)))
     # Force colored warnings in Ninja's output, if the compiler has -fdiagnostics-color support.
     # Rationale in https://github.com/ninja-build/ninja/issues/814
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
